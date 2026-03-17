@@ -2,6 +2,22 @@
 
 A client-side web app that helps you build precise FortiGate firewall policies from traffic logs — no backend, no server, everything runs in your browser.
 
+## Screenshots
+
+### Step 1 — Import Traffic Log
+![Import](docs/screenshot-01-import.png)
+
+### Step 2 — Review Traffic
+![Traffic Review](docs/screenshot-02-traffic.png)
+
+### Step 3 — Create Firewall Policy
+![Policy Modal](docs/screenshot-03-policy-modal.png)
+
+### Step 4 — Export CLI Script
+![Export CLI](docs/screenshot-04-output.png)
+
+---
+
 ## The Problem
 
 When setting up a FortiGate firewall from scratch, the typical workflow is:
