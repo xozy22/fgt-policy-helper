@@ -27,12 +27,16 @@ export function CliPreview({ script }: Props) {
   }
 
   function handleDownload() {
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const now  = new Date();
+    const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const hh   = now.getHours()  .toString().padStart(2, '0');
+    const mm   = now.getMinutes().toString().padStart(2, '0');
+    const ss   = now.getSeconds().toString().padStart(2, '0');
     const blob = new Blob([script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `fortigate-policy-${date}.txt`;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `fortigate-policy-${date}-${hh}${mm}${ss}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }

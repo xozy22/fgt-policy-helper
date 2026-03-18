@@ -3,6 +3,7 @@ import { clsx } from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
 import { AddressObjectModal } from '../objects/AddressObjectModal';
 import { PolicyModal } from '../policy/PolicyModal';
+import { BatchPolicyModal } from './BatchPolicyModal';
 
 export function ActionBar() {
   const selectedEntryIds = useAppStore(s => s.selectedEntryIds);
@@ -19,6 +20,7 @@ export function ActionBar() {
 
   const [showAddrModal, setShowAddrModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
   const selectedCount = selectedEntryIds.size;
   const filteredCount = useMemo(
@@ -101,6 +103,20 @@ export function ActionBar() {
         </button>
 
         <button
+          onClick={() => setShowBatchModal(true)}
+          disabled={totalAvailable === 0}
+          className={clsx(
+            'px-3 py-1.5 text-xs font-medium rounded transition-colors border',
+            totalAvailable > 0
+              ? 'border-purple-600 text-purple-400 hover:bg-purple-900/30'
+              : 'border-gray-700 text-gray-600 cursor-not-allowed',
+          )}
+          title="Create one policy per interface pair from all uncovered entries"
+        >
+          ⚡ Batch by Interface
+        </button>
+
+        <button
           onClick={() => setStep('output')}
           disabled={policies.length === 0}
           className={clsx(
@@ -120,6 +136,9 @@ export function ActionBar() {
       )}
       {showPolicyModal && (
         <PolicyModal onClose={() => setShowPolicyModal(false)} />
+      )}
+      {showBatchModal && (
+        <BatchPolicyModal onClose={() => setShowBatchModal(false)} />
       )}
     </>
   );

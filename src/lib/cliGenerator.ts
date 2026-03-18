@@ -1,10 +1,15 @@
 import type { AddressObject, AddressGroup, ServiceObject, FirewallPolicy } from '../types/policy';
 
+/** Escape backslashes and double-quotes for FortiGate CLI strings. */
+function esc(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function generateAddressBlock(objects: AddressObject[]): string {
   if (objects.length === 0) return '';
   const lines: string[] = ['config firewall address'];
   for (const obj of objects) {
-    lines.push(`    edit "${obj.name}"`);
+    lines.push(`    edit "${esc(obj.name)}"`);
     switch (obj.type) {
       case 'host':
         lines.push(`        set type ipmask`);
@@ -32,9 +37,9 @@ function generateAddressGroupBlock(groups: AddressGroup[]): string {
   if (groups.length === 0) return '';
   const lines: string[] = ['config firewall addrgrp'];
   for (const grp of groups) {
-    lines.push(`    edit "${grp.name}"`);
-    lines.push(`        set member ${grp.members.map(m => `"${m}"`).join(' ')}`);
-    if (grp.comment) lines.push(`        set comment "${grp.comment}"`);
+    lines.push(`    edit "${esc(grp.name)}"`);
+    lines.push(`        set member ${grp.members.map(m => `"${esc(m)}"`).join(' ')}`);
+    if (grp.comment) lines.push(`        set comment "${esc(grp.comment)}"`);
     lines.push(`    next`);
   }
   lines.push('end');
@@ -45,7 +50,7 @@ function generateServiceBlock(services: ServiceObject[]): string {
   if (services.length === 0) return '';
   const lines: string[] = ['config firewall service custom'];
   for (const svc of services) {
-    lines.push(`    edit "${svc.name}"`);
+    lines.push(`    edit "${esc(svc.name)}"`);
     switch (svc.protocol) {
       case 'TCP':
         lines.push(`        set protocol TCP/UDP/SCTP`);
@@ -74,15 +79,15 @@ function generatePolicyBlock(policies: FirewallPolicy[]): string {
   for (const pol of policies) {
     const services = pol.service.length === 0 ? ['ALL'] : pol.service;
     lines.push(`    edit 0`);
-    lines.push(`        set name "${pol.name}"`);
-    if (pol.comment) lines.push(`        set comments "${pol.comment}"`);
-    lines.push(`        set srcintf "${pol.srcintf}"`);
-    lines.push(`        set dstintf "${pol.dstintf}"`);
-    lines.push(`        set srcaddr "${pol.srcaddr}"`);
-    lines.push(`        set dstaddr "${pol.dstaddr}"`);
-    lines.push(`        set service ${services.map(s => `"${s}"`).join(' ')}`);
+    lines.push(`        set name "${esc(pol.name)}"`);
+    if (pol.comment) lines.push(`        set comments "${esc(pol.comment)}"`);
+    lines.push(`        set srcintf "${esc(pol.srcintf)}"`);
+    lines.push(`        set dstintf "${esc(pol.dstintf)}"`);
+    lines.push(`        set srcaddr "${esc(pol.srcaddr)}"`);
+    lines.push(`        set dstaddr "${esc(pol.dstaddr)}"`);
+    lines.push(`        set service ${services.map(s => `"${esc(s)}"`).join(' ')}`);
     lines.push(`        set action ${pol.action}`);
-    lines.push(`        set schedule "${pol.schedule}"`);
+    lines.push(`        set schedule "${esc(pol.schedule)}"`);
     lines.push(`        set logtraffic ${pol.logtraffic}`);
     lines.push(`    next`);
   }

@@ -238,6 +238,13 @@ function AddrSelect({ value, onChange, options, matchSet, label }: AddrSelectPro
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function PolicyModal({ onClose, editPolicy }: Props) {
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const trafficEntries     = useAppStore(s => s.trafficEntries);
   const selectedEntryIds   = useAppStore(s => s.selectedEntryIds);
   const getAllAddressNames  = useAppStore(s => s.getAllAddressNames);

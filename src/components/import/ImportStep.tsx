@@ -3,20 +3,45 @@ import { clsx } from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
 import { FileDropZone } from './FileDropZone';
 import { PasteInput } from './PasteInput';
+import { parseLog } from '../../lib/logParser';
 
 type Tab = 'upload' | 'paste';
 
+interface Feedback {
+  ok: boolean;
+  message: string;
+  details?: string[];
+}
+
 export function ImportStep() {
   const [tab, setTab] = useState<Tab>('upload');
-  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const importLog = useAppStore(s => s.importLog);
 
   function handleText(text: string) {
+    // Parse first so we can capture error details even on success
+    const parsed = parseLog(text);
     const result = importLog(text);
+
     if (!result.ok) {
-      setFeedback(result);
+      setFeedback({
+        ok:      false,
+        message: result.message,
+        details: parsed.errorDetails.length > 0 ? parsed.errorDetails : undefined,
+      });
+    } else if (parsed.errorLines > 0) {
+      // Succeeded but there were some bad lines — surface them as a warning
+      setFeedback({
+        ok:      true,
+        message: result.message,
+        details: parsed.errorDetails.length > 0
+          ? [`${parsed.errorLines} lines could not be parsed:`, ...parsed.errorDetails]
+          : undefined,
+      });
+      // On success the store switches step automatically after a short delay
     }
-    // On success the store switches step automatically
+    // On clean success with no errors: no feedback needed (step changes)
   }
 
   return (
@@ -35,12 +60,10 @@ export function ImportStep() {
           {(['upload', 'paste'] as Tab[]).map(t => (
             <button
               key={t}
-              onClick={() => { setTab(t); setFeedback(null); }}
+              onClick={() => { setTab(t); setFeedback(null); setShowDetails(false); }}
               className={clsx(
                 'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
-                tab === t
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:text-gray-200',
+                tab === t ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200',
               )}
             >
               {t === 'upload' ? '↑ Upload File' : '⎘ Paste Text'}
@@ -52,14 +75,35 @@ export function ImportStep() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
           {tab === 'upload'
             ? <FileDropZone onText={handleText} />
-            : <PasteInput onText={handleText} />
+            : <PasteInput   onText={handleText} />
           }
         </div>
 
-        {/* Error feedback */}
-        {feedback && !feedback.ok && (
-          <div className="mt-4 p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-            {feedback.message}
+        {/* Feedback */}
+        {feedback && (
+          <div className={clsx(
+            'mt-4 p-3 border rounded-lg text-sm',
+            feedback.ok
+              ? 'bg-yellow-900/30 border-yellow-700/60 text-yellow-300'
+              : 'bg-red-900/40 border-red-700 text-red-300',
+          )}>
+            <p>{feedback.message}</p>
+
+            {feedback.details && feedback.details.length > 0 && (
+              <div className="mt-1">
+                <button
+                  onClick={() => setShowDetails(v => !v)}
+                  className="text-xs underline opacity-70 hover:opacity-100"
+                >
+                  {showDetails ? 'Hide details ▲' : 'Show details ▼'}
+                </button>
+                {showDetails && (
+                  <ul className="mt-2 text-xs font-mono space-y-0.5 opacity-80">
+                    {feedback.details.map((d, i) => <li key={i}>{d}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
 

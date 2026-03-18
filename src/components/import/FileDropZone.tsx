@@ -10,9 +10,12 @@ export function FileDropZone({ onText }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const MAX_SIZE_MB = 100;
+
   function readFile(file: File) {
-    if (!file.name.match(/\.(log|txt|csv)$/i) && file.type !== 'text/plain') {
-      // Accept any file – FortiGate exports may have various extensions
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setError(`File too large: ${(file.size / 1024 / 1024).toFixed(0)} MB. Maximum is ${MAX_SIZE_MB} MB.`);
+      return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {

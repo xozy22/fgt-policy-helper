@@ -16,13 +16,19 @@ function buildDedupKey(e: RawLogEntry): string {
   return `${e.srcip}|${e.srcport}|${e.srcintf}|${e.dstip}|${e.dstport}|${e.dstintf}|${e.proto}`;
 }
 
-/** Simple deterministic ID from string (djb2-like, hex) */
-function hashKey(key: string): string {
-  let h = 5381;
+/**
+ * 64-bit deterministic hash (two independent djb2 passes).
+ * Yields 16 hex chars — collision-resistant for any realistic log size.
+ */
+function stableId(key: string): string {
+  let h1 = 5381;
+  let h2 = 52711;
   for (let i = 0; i < key.length; i++) {
-    h = ((h << 5) + h + key.charCodeAt(i)) >>> 0;
+    const c = key.charCodeAt(i);
+    h1 = ((h1 << 5) + h1 + c) >>> 0;
+    h2 = ((h2 << 5) + h2 + c) >>> 0;
   }
-  return h.toString(16).padStart(8, '0');
+  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
 }
 
 export function deduplicateEntries(raw: RawLogEntry[]): TrafficEntry[] {
@@ -36,7 +42,7 @@ export function deduplicateEntries(raw: RawLogEntry[]): TrafficEntry[] {
       existing.hitCount++;
     } else {
       map.set(key, {
-        id: hashKey(key),
+        id: stableId(key),
         srcip: e.srcip,
         srcport: e.srcport,
         srcintf: e.srcintf,
