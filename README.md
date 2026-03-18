@@ -30,13 +30,34 @@ This app automates step 4.
 
 ## Features
 
-- **Log Import** — paste or upload a FortiGate traffic log (key=value format)
-- **Automatic Deduplication** — identical flows are collapsed into one row with a hit count
-- **Traffic Filtering** — filter by source/destination IP (exact, CIDR, range), port, interface, protocol, or action with combinable AND/OR logic
-- **Address Objects** — select traffic entries and create host/subnet/range address objects; IPs that fall in the same subnet are automatically grouped into a single object
-- **Policy Creation** — create firewall policies from selected traffic entries; interfaces, addresses and services are pre-filled automatically
+### Import
+- **Log Import** — paste or upload a FortiGate traffic log (`.log` / `.txt`, up to 100 MB)
+- **Parse Error Details** — collapsible list of lines that failed to parse, so you can spot format issues immediately
+- **Automatic Deduplication** — identical 7-tuple flows are collapsed into one row with a hit count
+
+### Traffic Review
+- **Advanced Filtering** — filter by source/destination IP (exact, CIDR, range), port range, interface, protocol, or action with combinable AND/OR row logic
+- **Selection Sync** — selection is automatically pruned when filters change so stale IDs never carry over
+- **Consumed Entry Toggle** — show or hide entries already covered by a policy
+
+### Policy Creation
+- **Address Objects** — select entries and create host/subnet/range address objects with auto-suggested subnet
+- **Policy Modal** — interfaces, addresses and services are pre-filled from the selection; smart address matching highlights the best-fit object
+- **Batch by Interface** — one click creates one policy per uncovered `srcintf → dstintf` pair with editable names and addresses
 - **Policy Editing** — double-click any policy in the output view to edit it
-- **CLI Export** — generates a ready-to-paste FortiGate CLI script with all address objects, service objects, and policies in the correct order
+
+### Output
+- **Coverage Stats** — colour-coded progress bar with Total / Covered / Uncovered counters
+- **Coverage Gaps Panel** — uncovered entries grouped by interface pair with direct "Fix →" links back to traffic view
+- **Conflict Detection** — ⚠ badge on policies that share the same interface pair
+- **CLI Export** — ready-to-paste FortiGate CLI script with all address objects, service objects and policies in correct order; download filename includes a `YYYYMMDD-HHMMSS` timestamp
+- **Policy Reordering** — move policies up/down to control hit order
+
+### Reliability & UX
+- **Undo / Redo** — full history stack (Ctrl+Z / Ctrl+Y) for all create/delete/reorder actions
+- **Session Persistence** — state is saved to `localStorage` and restored on reload
+- **Keyboard Shortcuts** — Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo, Escape closes any modal
+- **CLI String Escaping** — backslashes and quotes in names are correctly escaped for FortiGate CLI
 
 ## Workflow
 
@@ -44,10 +65,10 @@ This app automates step 4.
 Import Log → Review Traffic → Create Objects & Policies → Copy CLI Script
 ```
 
-1. **Import** — paste your FortiGate log or drop a file
-2. **Traffic Review** — filter and select the entries you want to cover
-3. **Create Policy** — the app suggests interfaces, addresses, and services based on your selection
-4. **Output** — copy the generated CLI script and paste it into your FortiGate CLI
+1. **Import** — paste your FortiGate log or drop a `.log` / `.txt` file
+2. **Traffic Review** — filter by IP, port, interface, protocol; select entries you want to cover
+3. **Create Objects & Policies** — build address objects from selected IPs, then create a policy, or use **Batch by Interface** to cover all remaining traffic at once
+4. **Output** — review coverage stats and conflict warnings, reorder policies if needed, then copy or download the CLI script and paste it into your FortiGate
 
 ## Tech Stack
 
