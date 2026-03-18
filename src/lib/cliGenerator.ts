@@ -46,25 +46,32 @@ function generateAddressGroupBlock(groups: AddressGroup[]): string {
   return lines.join('\n');
 }
 
+/**
+ * Only emit custom service objects for TCP/UDP/ICMP.
+ * Services with protocol=ANY map to the built-in FortiGate "ALL" service
+ * and must NOT generate a `config firewall service custom` entry —
+ * the `ALL` protocol option in that stanza is reserved for web-proxy use only.
+ */
 function generateServiceBlock(services: ServiceObject[]): string {
-  if (services.length === 0) return '';
+  const custom = services.filter(s => s.protocol !== 'ANY');
+  if (custom.length === 0) return '';
   const lines: string[] = ['config firewall service custom'];
-  for (const svc of services) {
+  for (const svc of custom) {
     lines.push(`    edit "${esc(svc.name)}"`);
     switch (svc.protocol) {
       case 'TCP':
-        lines.push(`        set protocol TCP/UDP/SCTP`);
+        // protocol TCP/UDP/UDP-Lite/SCTP is the correct identifier per FortiOS CLI ref.
+        // Use tcp-portrange to restrict to TCP only.
+        lines.push(`        set protocol TCP/UDP/UDP-Lite/SCTP`);
         if (svc.portRange) lines.push(`        set tcp-portrange ${svc.portRange}`);
         break;
       case 'UDP':
-        lines.push(`        set protocol TCP/UDP/SCTP`);
+        // Same protocol identifier; udp-portrange restricts to UDP only.
+        lines.push(`        set protocol TCP/UDP/UDP-Lite/SCTP`);
         if (svc.portRange) lines.push(`        set udp-portrange ${svc.portRange}`);
         break;
       case 'ICMP':
         lines.push(`        set protocol ICMP`);
-        break;
-      case 'ANY':
-        lines.push(`        set protocol ALL`);
         break;
     }
     lines.push(`    next`);
@@ -73,11 +80,17 @@ function generateServiceBlock(services: ServiceObject[]): string {
   return lines.join('\n');
 }
 
-function generatePolicyBlock(policies: FirewallPolicy[]): string {
+function generatePolicyBlock(policies: FirewallPolicy[], anyServiceNames: Set<string>): string {
   if (policies.length === 0) return '';
   const lines: string[] = ['config firewall policy'];
   for (const pol of policies) {
-    const services = pol.service.length === 0 ? ['ALL'] : pol.service;
+    // Replace names that came from ANY-typed service objects with the
+    // built-in FortiGate "ALL" service (custom ANY entries are not generated).
+    const resolvedServices = pol.service.map(s => anyServiceNames.has(s) ? 'ALL' : s);
+    // Deduplicate in case multiple ANY services collapse into "ALL"
+    const seen = new Set<string>();
+    const services = (resolvedServices.length === 0 ? ['ALL'] : resolvedServices)
+      .filter(s => { if (seen.has(s)) return false; seen.add(s); return true; });
     lines.push(`    edit 0`);
     lines.push(`        set name "${esc(pol.name)}"`);
     if (pol.comment) lines.push(`        set comments "${esc(pol.comment)}"`);
@@ -103,14 +116,19 @@ export function generateCliScript(
 ): string {
   const sortedPolicies = [...policies].sort((a, b) => a.order - b.order);
 
-  // Only emit service objects actually referenced by a policy
+  // Collect names of ANY-typed services so the policy block can substitute "ALL"
+  const anyServiceNames = new Set<string>(
+    serviceObjects.filter(s => s.protocol === 'ANY').map(s => s.name),
+  );
+
+  // Only emit custom service objects actually referenced by a policy (excludes ANY)
   const usedSvcNames = new Set<string>();
   for (const pol of sortedPolicies) {
     for (const s of pol.service) {
       if (s !== 'ALL') usedSvcNames.add(s);
     }
   }
-  const usedSvcs = serviceObjects.filter(s => usedSvcNames.has(s.name));
+  const usedSvcs = serviceObjects.filter(s => usedSvcNames.has(s.name) && s.protocol !== 'ANY');
 
   const sections: string[] = [];
 
@@ -124,7 +142,7 @@ export function generateCliScript(
   const svcBlock = generateServiceBlock(usedSvcs);
   if (svcBlock) sections.push(svcBlock);
 
-  const polBlock = generatePolicyBlock(sortedPolicies);
+  const polBlock = generatePolicyBlock(sortedPolicies, anyServiceNames);
   if (polBlock) sections.push(polBlock);
 
   return sections.join('\n\n');
