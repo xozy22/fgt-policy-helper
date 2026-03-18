@@ -5,6 +5,37 @@ import { useAppStore } from '../../store/useAppStore';
 import type { AddressObject, AddressGroup, FirewallPolicy } from '../../types/policy';
 import { isIpInCidr, isIpInRange, subnetMaskToPrefix } from '../../lib/ipUtils';
 
+/** FortiOS maximum policy name length (per CLI reference). */
+const POLICY_NAME_MAX = 35;
+
+/**
+ * Suggest a unique policy name derived from interface names.
+ * Format: Allow-{srcintf}-to-{dstintf}, trimmed to fit POLICY_NAME_MAX.
+ * If the name already exists, appends -2, -3, … until unique.
+ */
+function suggestPolicyName(
+  srcintf: string,
+  dstintf: string,
+  existingPolicies: FirewallPolicy[],
+): string {
+  const existing = new Set(existingPolicies.map(p => p.name));
+  const base = `Allow-${srcintf || 'src'}-to-${dstintf || 'dst'}`;
+
+  function fit(s: string, suffix = ''): string {
+    const max = POLICY_NAME_MAX - suffix.length;
+    return (s.length > max ? s.slice(0, max) : s) + suffix;
+  }
+
+  const candidate = fit(base);
+  if (!existing.has(candidate)) return candidate;
+
+  for (let n = 2; n <= 99; n++) {
+    const c = fit(base, `-${n}`);
+    if (!existing.has(c)) return c;
+  }
+  return candidate; // fallback (shouldn't happen in practice)
+}
+
 interface Props {
   onClose: () => void;
   /** Pre-fill + edit an existing policy */
@@ -251,6 +282,7 @@ export function PolicyModal({ onClose, editPolicy }: Props) {
   const addressObjects     = useAppStore(s => s.addressObjects);
   const addressGroups      = useAppStore(s => s.addressGroups);
   const serviceObjects     = useAppStore(s => s.serviceObjects);
+  const policies           = useAppStore(s => s.policies);
   const createPolicy       = useAppStore(s => s.createPolicy);
   const updatePolicy       = useAppStore(s => s.updatePolicy);
   const createServiceObject = useAppStore(s => s.createServiceObject);
@@ -306,7 +338,11 @@ export function PolicyModal({ onClose, editPolicy }: Props) {
     return s;
   }, [dstIps, addressObjects, addressGroups]);
 
-  const [name, setName]           = useState(editPolicy?.name ?? '');
+  const [name, setName]           = useState(() =>
+    editPolicy
+      ? editPolicy.name
+      : suggestPolicyName(srcIntfs[0] ?? '', dstIntfs[0] ?? '', policies),
+  );
   const [srcintf, setSrcintf]     = useState(editPolicy?.srcintf ?? srcIntfs[0] ?? '');
   const [dstintf, setDstintf]     = useState(editPolicy?.dstintf ?? dstIntfs[0] ?? '');
   // Edit mode: use existing addresses; create mode: auto-suggest best match
@@ -435,12 +471,23 @@ export function PolicyModal({ onClose, editPolicy }: Props) {
 
           {/* Policy name */}
           <div>
-            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Policy Name</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs text-gray-400 uppercase tracking-wider">Policy Name</label>
+              <span className={clsx(
+                'text-xs tabular-nums',
+                name.length >= POLICY_NAME_MAX       ? 'text-red-400 font-semibold' :
+                name.length >= POLICY_NAME_MAX - 5   ? 'text-yellow-400' :
+                                                       'text-gray-600',
+              )}>
+                {name.length}/{POLICY_NAME_MAX}
+              </span>
+            </div>
             <input
               type="text"
               value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Allow-Solar-to-Internet"
+              onChange={e => setName(e.target.value.slice(0, POLICY_NAME_MAX))}
+              maxLength={POLICY_NAME_MAX}
+              placeholder="e.g. Allow-LAN-to-WAN"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-orange-500"
             />
           </div>
