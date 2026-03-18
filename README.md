@@ -50,6 +50,7 @@ This app automates step 4.
 - **Coverage Stats** — colour-coded progress bar with Total / Covered / Uncovered counters
 - **Coverage Gaps Panel** — uncovered entries grouped by interface pair with direct "Fix →" links back to traffic view
 - **Conflict Detection** — ⚠ badge on policies that share the same interface pair
+- **FortiOS Version Selector** — toggle between FortiOS 7.4 and 7.6 in the CLI preview toolbar; script regenerates instantly with the correct syntax for the selected version
 - **CLI Export** — ready-to-paste FortiGate CLI script with all address objects, service objects and policies in correct order; download filename includes a `YYYYMMDD-HHMMSS` timestamp
 - **Policy Reordering** — move policies up/down to control hit order
 
@@ -107,6 +108,15 @@ Required fields: `srcip`, `srcport`, `srcintf`, `dstip`, `dstport`, `dstintf`, `
 
 ## CLI Output Example
 
+The generated script is versioned to match the target FortiOS. Select 7.4 or 7.6 in the toolbar — the only difference currently visible is the `set protocol` value in service objects:
+
+| FortiOS | Protocol identifier |
+|---------|-------------------|
+| 7.6 | `TCP/UDP/UDP-Lite/SCTP` |
+| 7.4 | `TCP/UDP/SCTP` |
+
+### FortiOS 7.6
+
 ```
 config firewall address
     edit "LAN-192.168.10.0"
@@ -117,7 +127,7 @@ end
 
 config firewall service custom
     edit "TCP-443"
-        set protocol TCP/UDP/SCTP
+        set protocol TCP/UDP/UDP-Lite/SCTP
         set tcp-portrange 443
     next
 end
@@ -133,6 +143,17 @@ config firewall policy
         set action accept
         set schedule "always"
         set logtraffic all
+    next
+end
+```
+
+### FortiOS 7.4
+
+```
+config firewall service custom
+    edit "TCP-443"
+        set protocol TCP/UDP/SCTP
+        set tcp-portrange 443
     next
 end
 ```
