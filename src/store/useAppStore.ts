@@ -17,6 +17,8 @@ interface AppSnapshot {
   policies:       FirewallPolicy[];
 }
 
+export type FortiosVersion = '7.4' | '7.6';
+
 interface AppState {
   step:              WorkflowStep;
   rawEntryCount:     number;
@@ -33,6 +35,7 @@ interface AppState {
   showConsumedEntries: boolean;
   sortField:         keyof TrafficEntry;
   sortDirection:     'asc' | 'desc';
+  fortiosVersion:    FortiosVersion;
   // undo/redo stacks — not persisted
   _past:   AppSnapshot[];
   _future: AppSnapshot[];
@@ -73,6 +76,7 @@ interface AppActions {
 
   setSortField:          (field: keyof TrafficEntry) => void;
   setShowConsumedEntries: (show: boolean) => void;
+  setFortiosVersion:     (v: FortiosVersion) => void;
 
   undo: () => void;
   redo: () => void;
@@ -102,6 +106,7 @@ const initialState: AppState = {
   showConsumedEntries: false,
   sortField:         'srcip',
   sortDirection:     'asc',
+  fortiosVersion:    '7.6',
   _past:             [],
   _future:           [],
 };
@@ -398,6 +403,7 @@ export const useAppStore = create<AppState & AppActions>()(
         })),
 
       setShowConsumedEntries: (show) => set({ showConsumedEntries: show }),
+      setFortiosVersion: (v) => set({ fortiosVersion: v }),
 
       // ── Selectors ────────────────────────────────────────────────────────────
 

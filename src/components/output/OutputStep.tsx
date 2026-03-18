@@ -7,15 +7,17 @@ import { CliPreview } from './CliPreview';
 import { PolicyModal } from '../policy/PolicyModal';
 
 export function OutputStep() {
-  const policies       = useAppStore(s => s.policies);
-  const addressObjects = useAppStore(s => s.addressObjects);
-  const addressGroups  = useAppStore(s => s.addressGroups);
-  const serviceObjects = useAppStore(s => s.serviceObjects);
-  const trafficEntries = useAppStore(s => s.trafficEntries);
-  const deletePolicy   = useAppStore(s => s.deletePolicy);
-  const reorderPolicies = useAppStore(s => s.reorderPolicies);
-  const setStep        = useAppStore(s => s.setStep);
-  const resetAll       = useAppStore(s => s.resetAll);
+  const policies         = useAppStore(s => s.policies);
+  const addressObjects   = useAppStore(s => s.addressObjects);
+  const addressGroups    = useAppStore(s => s.addressGroups);
+  const serviceObjects   = useAppStore(s => s.serviceObjects);
+  const trafficEntries   = useAppStore(s => s.trafficEntries);
+  const deletePolicy     = useAppStore(s => s.deletePolicy);
+  const reorderPolicies  = useAppStore(s => s.reorderPolicies);
+  const setStep          = useAppStore(s => s.setStep);
+  const resetAll         = useAppStore(s => s.resetAll);
+  const fortiosVersion   = useAppStore(s => s.fortiosVersion);
+  const setFortiosVersion = useAppStore(s => s.setFortiosVersion);
 
   const [editingPolicy, setEditingPolicy] = useState<FirewallPolicy | null>(null);
   const [showGaps, setShowGaps] = useState(true);
@@ -56,8 +58,8 @@ export function OutputStep() {
   }, [policies]);
 
   const script = useMemo(
-    () => generateCliScript(policies, addressObjects, addressGroups, serviceObjects),
-    [policies, addressObjects, addressGroups, serviceObjects],
+    () => generateCliScript(policies, addressObjects, addressGroups, serviceObjects, fortiosVersion),
+    [policies, addressObjects, addressGroups, serviceObjects, fortiosVersion],
   );
 
   const sortedPolicies = [...policies].sort((a, b) => a.order - b.order);
@@ -309,7 +311,11 @@ export function OutputStep() {
 
         {/* Right: CLI Preview */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <CliPreview script={script} />
+          <CliPreview
+            script={script}
+            fortiosVersion={fortiosVersion}
+            onVersionChange={setFortiosVersion}
+          />
         </div>
       </div>
 

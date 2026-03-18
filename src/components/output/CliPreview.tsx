@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { clsx } from 'clsx';
+import type { FortiosVersion } from '../../store/useAppStore';
+
+const VERSIONS: { value: FortiosVersion; label: string }[] = [
+  { value: '7.6', label: 'FortiOS 7.6' },
+  { value: '7.4', label: 'FortiOS 7.4' },
+];
 
 interface Props {
   script: string;
+  fortiosVersion: FortiosVersion;
+  onVersionChange: (v: FortiosVersion) => void;
 }
 
-export function CliPreview({ script }: Props) {
+export function CliPreview({ script, fortiosVersion, onVersionChange }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -47,7 +55,31 @@ export function CliPreview({ script }: Props) {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800">
-        <span className="text-xs text-gray-500">{lineCount} lines</span>
+        {/* Left: line count + version selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">{lineCount} lines</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500">Target:</span>
+            <div className="flex rounded overflow-hidden border border-gray-700">
+              {VERSIONS.map(v => (
+                <button
+                  key={v.value}
+                  onClick={() => onVersionChange(v.value)}
+                  className={clsx(
+                    'px-2.5 py-1 text-xs font-medium transition-colors',
+                    fortiosVersion === v.value
+                      ? 'bg-orange-700 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200',
+                  )}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: copy + download */}
         <div className="flex gap-2">
           <button
             onClick={handleCopy}

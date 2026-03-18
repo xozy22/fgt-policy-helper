@@ -1,4 +1,5 @@
 import type { AddressObject, AddressGroup, ServiceObject, FirewallPolicy } from '../types/policy';
+import type { FortiosVersion } from '../store/useAppStore';
 
 /** Escape backslashes and double-quotes for FortiGate CLI strings. */
 function esc(s: string): string {
@@ -47,27 +48,33 @@ function generateAddressGroupBlock(groups: AddressGroup[]): string {
 }
 
 /**
- * Only emit custom service objects for TCP/UDP/ICMP.
+ * FortiOS version differences for `config firewall service custom`:
+ *
+ *  7.4: set protocol TCP/UDP/SCTP          (no UDP-Lite; default value)
+ *  7.6: set protocol TCP/UDP/UDP-Lite/SCTP (UDP-Lite added; default value)
+ *
  * Services with protocol=ANY map to the built-in FortiGate "ALL" service
  * and must NOT generate a `config firewall service custom` entry —
  * the `ALL` protocol option in that stanza is reserved for web-proxy use only.
  */
-function generateServiceBlock(services: ServiceObject[]): string {
+function protoIdentifier(version: FortiosVersion): string {
+  return version === '7.6' ? 'TCP/UDP/UDP-Lite/SCTP' : 'TCP/UDP/SCTP';
+}
+
+function generateServiceBlock(services: ServiceObject[], version: FortiosVersion): string {
   const custom = services.filter(s => s.protocol !== 'ANY');
   if (custom.length === 0) return '';
+  const proto = protoIdentifier(version);
   const lines: string[] = ['config firewall service custom'];
   for (const svc of custom) {
     lines.push(`    edit "${esc(svc.name)}"`);
     switch (svc.protocol) {
       case 'TCP':
-        // protocol TCP/UDP/UDP-Lite/SCTP is the correct identifier per FortiOS CLI ref.
-        // Use tcp-portrange to restrict to TCP only.
-        lines.push(`        set protocol TCP/UDP/UDP-Lite/SCTP`);
+        lines.push(`        set protocol ${proto}`);
         if (svc.portRange) lines.push(`        set tcp-portrange ${svc.portRange}`);
         break;
       case 'UDP':
-        // Same protocol identifier; udp-portrange restricts to UDP only.
-        lines.push(`        set protocol TCP/UDP/UDP-Lite/SCTP`);
+        lines.push(`        set protocol ${proto}`);
         if (svc.portRange) lines.push(`        set udp-portrange ${svc.portRange}`);
         break;
       case 'ICMP':
@@ -113,6 +120,7 @@ export function generateCliScript(
   addressObjects: AddressObject[],
   addressGroups: AddressGroup[],
   serviceObjects: ServiceObject[],
+  version: FortiosVersion = '7.6',
 ): string {
   const sortedPolicies = [...policies].sort((a, b) => a.order - b.order);
 
@@ -139,7 +147,7 @@ export function generateCliScript(
   const grpBlock = generateAddressGroupBlock(addressGroups);
   if (grpBlock) sections.push(grpBlock);
 
-  const svcBlock = generateServiceBlock(usedSvcs);
+  const svcBlock = generateServiceBlock(usedSvcs, version);
   if (svcBlock) sections.push(svcBlock);
 
   const polBlock = generatePolicyBlock(sortedPolicies, anyServiceNames);
