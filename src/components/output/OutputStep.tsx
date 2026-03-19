@@ -258,7 +258,7 @@ export function OutputStep() {
                     </div>
                   </div>
 
-                  {/* Order controls */}
+                  {/* Order + action controls */}
                   <div className="flex flex-col gap-1 flex-shrink-0">
                     <button
                       onClick={e => { e.stopPropagation(); moveUp(index); }}
@@ -276,6 +276,17 @@ export function OutputStep() {
                     >
                       ↓
                     </button>
+                    {/* Edit button */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setEditingPolicy(policy); }}
+                      className="text-gray-600 hover:text-orange-400 transition-colors"
+                      title="Edit policy"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                      </svg>
+                    </button>
+                    {/* Delete button */}
                     <button
                       onClick={e => { e.stopPropagation(); deletePolicy(policy.id); }}
                       className="text-gray-600 hover:text-red-400 transition-colors text-xs"
