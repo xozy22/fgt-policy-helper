@@ -33,7 +33,7 @@ export function ConfirmDialog({
         </div>
 
         {/* Body */}
-        <p className="px-5 py-4 text-sm text-gray-400 leading-relaxed">{message}</p>
+        <p className="px-5 py-4 text-sm text-gray-400 leading-relaxed whitespace-pre-line">{message}</p>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-800">

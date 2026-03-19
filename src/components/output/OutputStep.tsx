@@ -6,6 +6,7 @@ import { generateCliScript } from '../../lib/cliGenerator';
 import { CliPreview } from './CliPreview';
 import { PolicyModal } from '../policy/PolicyModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { UndoToast } from '../common/UndoToast';
 
 export function OutputStep() {
   const policies         = useAppStore(s => s.policies);
@@ -14,6 +15,7 @@ export function OutputStep() {
   const serviceObjects   = useAppStore(s => s.serviceObjects);
   const trafficEntries   = useAppStore(s => s.trafficEntries);
   const deletePolicy     = useAppStore(s => s.deletePolicy);
+  const undo             = useAppStore(s => s.undo);
   const reorderPolicies  = useAppStore(s => s.reorderPolicies);
   const setStep          = useAppStore(s => s.setStep);
   const resetAll         = useAppStore(s => s.resetAll);
@@ -22,6 +24,7 @@ export function OutputStep() {
 
   const [editingPolicy, setEditingPolicy]   = useState<FirewallPolicy | null>(null);
   const [deletingPolicy, setDeletingPolicy] = useState<FirewallPolicy | null>(null);
+  const [undoToast, setUndoToast]           = useState<string | null>(null); // policy name
   const [showGaps, setShowGaps]             = useState(true);
 
   // ── Drag-and-drop state ──────────────────────────────────────────────────────
@@ -388,15 +391,29 @@ export function OutputStep() {
         />
       )}
 
+      {/* Undo Toast */}
+      {undoToast && (
+        <UndoToast
+          message={`Policy "${undoToast}" deleted.`}
+          onUndo={undo}
+          onDismiss={() => setUndoToast(null)}
+        />
+      )}
+
       {/* Delete Confirmation Dialog */}
       {deletingPolicy && (
         <ConfirmDialog
           danger
           title="Delete Policy"
-          message={`Are you sure you want to delete "${deletingPolicy.name}"? You can restore it with Undo (Ctrl+Z).`}
+          message={`Are you sure you want to delete "${deletingPolicy.name}"?\nYou can restore it with Undo (Ctrl+Z).`}
           confirmLabel="Delete"
           cancelLabel="Cancel"
-          onConfirm={() => { deletePolicy(deletingPolicy.id); setDeletingPolicy(null); }}
+          onConfirm={() => {
+            const name = deletingPolicy.name;
+            deletePolicy(deletingPolicy.id);
+            setDeletingPolicy(null);
+            setUndoToast(name);
+          }}
           onCancel={() => setDeletingPolicy(null)}
         />
       )}
