@@ -5,6 +5,7 @@ import type { FirewallPolicy } from '../../types/policy';
 import { generateCliScript } from '../../lib/cliGenerator';
 import { CliPreview } from './CliPreview';
 import { PolicyModal } from '../policy/PolicyModal';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 export function OutputStep() {
   const policies         = useAppStore(s => s.policies);
@@ -19,8 +20,9 @@ export function OutputStep() {
   const fortiosVersion   = useAppStore(s => s.fortiosVersion);
   const setFortiosVersion = useAppStore(s => s.setFortiosVersion);
 
-  const [editingPolicy, setEditingPolicy] = useState<FirewallPolicy | null>(null);
-  const [showGaps, setShowGaps] = useState(true);
+  const [editingPolicy, setEditingPolicy]   = useState<FirewallPolicy | null>(null);
+  const [deletingPolicy, setDeletingPolicy] = useState<FirewallPolicy | null>(null);
+  const [showGaps, setShowGaps]             = useState(true);
 
   // ── Drag-and-drop state ──────────────────────────────────────────────────────
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -288,11 +290,7 @@ export function OutputStep() {
                     </button>
                     {/* Delete button */}
                     <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (window.confirm(`Delete policy "${policy.name}"?\nThis cannot be undone without using Undo (Ctrl+Z).`))
-                          deletePolicy(policy.id);
-                      }}
+                      onClick={e => { e.stopPropagation(); setDeletingPolicy(policy); }}
                       className="text-gray-600 hover:text-red-400 transition-colors text-xs"
                       title="Delete policy"
                     >
@@ -387,6 +385,19 @@ export function OutputStep() {
         <PolicyModal
           onClose={() => setEditingPolicy(null)}
           editPolicy={editingPolicy}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingPolicy && (
+        <ConfirmDialog
+          danger
+          title="Delete Policy"
+          message={`Are you sure you want to delete "${deletingPolicy.name}"? You can restore it with Undo (Ctrl+Z).`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={() => { deletePolicy(deletingPolicy.id); setDeletingPolicy(null); }}
+          onCancel={() => setDeletingPolicy(null)}
         />
       )}
     </div>
