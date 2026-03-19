@@ -5,6 +5,7 @@ import { AddressObjectModal } from '../objects/AddressObjectModal';
 import { PolicyModal } from '../policy/PolicyModal';
 import { BatchPolicyModal } from './BatchPolicyModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { UndoToast } from '../common/UndoToast';
 
 export function ActionBar() {
   const selectedEntryIds = useAppStore(s => s.selectedEntryIds);
@@ -17,6 +18,7 @@ export function ActionBar() {
   const showConsumed = useAppStore(s => s.showConsumedEntries);
   const setShowConsumed = useAppStore(s => s.setShowConsumedEntries);
   const deduplicateIgnoringSrcPort = useAppStore(s => s.deduplicateIgnoringSrcPort);
+  const undo = useAppStore(s => s.undo);
   // Subscribe so the "X filtered" count re-renders live on every filter change.
   const activeFilters = useAppStore(s => s.activeFilters);
 
@@ -25,6 +27,7 @@ export function ActionBar() {
   const [showBatchModal, setShowBatchModal]  = useState(false);
   const [showDedupeConfirm, setShowDedupeConfirm] = useState(false);
   const [dedupeResult, setDedupeResult]     = useState<number | null>(null);
+  const [dedupeToast, setDedupeToast]       = useState<number | null>(null);
 
   const selectedCount = selectedEntryIds.size;
   const filteredCount = useMemo(
@@ -165,6 +168,13 @@ export function ActionBar() {
       {showBatchModal && (
         <BatchPolicyModal onClose={() => setShowBatchModal(false)} />
       )}
+      {dedupeToast !== null && (
+        <UndoToast
+          message={`${dedupeToast} duplicate ${dedupeToast === 1 ? 'entry' : 'entries'} removed.`}
+          onUndo={undo}
+          onDismiss={() => setDedupeToast(null)}
+        />
+      )}
       {showDedupeConfirm && (
         <ConfirmDialog
           title="Deduplicate Entries"
@@ -176,8 +186,12 @@ export function ActionBar() {
           onConfirm={() => {
             const removed = deduplicateIgnoringSrcPort();
             setShowDedupeConfirm(false);
-            setDedupeResult(removed);
-            setTimeout(() => setDedupeResult(null), 4000);
+            if (removed > 0) {
+              setDedupeToast(removed);
+            } else {
+              setDedupeResult(0);
+              setTimeout(() => setDedupeResult(null), 4000);
+            }
           }}
           onCancel={() => setShowDedupeConfirm(false)}
         />
