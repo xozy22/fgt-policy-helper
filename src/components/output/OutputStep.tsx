@@ -288,7 +288,11 @@ export function OutputStep() {
                     </button>
                     {/* Delete button */}
                     <button
-                      onClick={e => { e.stopPropagation(); deletePolicy(policy.id); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (window.confirm(`Delete policy "${policy.name}"?\nThis cannot be undone without using Undo (Ctrl+Z).`))
+                          deletePolicy(policy.id);
+                      }}
                       className="text-gray-600 hover:text-red-400 transition-colors text-xs"
                       title="Delete policy"
                     >
