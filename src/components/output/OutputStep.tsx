@@ -22,6 +22,34 @@ export function OutputStep() {
   const [editingPolicy, setEditingPolicy] = useState<FirewallPolicy | null>(null);
   const [showGaps, setShowGaps] = useState(true);
 
+  // ── Drag-and-drop state ──────────────────────────────────────────────────────
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function handleDragStart(index: number) {
+    setDragIndex(index);
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (overIndex !== index) setOverIndex(index);
+  }
+
+  function handleDrop(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== index) {
+      reorderPolicies(dragIndex, index);
+    }
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
   // ── Coverage stats ──────────────────────────────────────────────────────────
   const totalEntries   = trafficEntries.length;
   const coveredEntries = trafficEntries.filter(e => e.consumedByPolicyId !== null).length;
@@ -158,16 +186,34 @@ export function OutputStep() {
             {sortedPolicies.map((policy, index) => (
               <div
                 key={policy.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={e => handleDragOver(e, index)}
+                onDrop={e => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
                 onDoubleClick={() => setEditingPolicy(policy)}
-                title="Double-click to edit"
+                title="Drag to reorder · Double-click to edit"
                 className={clsx(
-                  'bg-gray-800 rounded-lg p-3 border cursor-pointer transition-colors',
-                  policy.action === 'accept'
-                    ? 'border-green-800/50 hover:border-green-700/70'
-                    : 'border-red-800/50 hover:border-red-700/70',
+                  'bg-gray-800 rounded-lg p-3 border transition-all select-none',
+                  // drop-target indicator: blue ring on the card being hovered
+                  overIndex === index && dragIndex !== null && dragIndex !== index
+                    ? 'border-orange-500 ring-1 ring-orange-500/40'
+                    : policy.action === 'accept'
+                      ? 'border-green-800/50 hover:border-green-700/70'
+                      : 'border-red-800/50 hover:border-red-700/70',
+                  // fade the card being dragged
+                  dragIndex === index ? 'opacity-40 cursor-grabbing' : 'cursor-grab',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
+                  {/* Drag handle */}
+                  <div className="flex flex-col items-center justify-center flex-shrink-0 pt-0.5 text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing">
+                    <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+                      <circle cx="2" cy="2"  r="1.5"/><circle cx="8" cy="2"  r="1.5"/>
+                      <circle cx="2" cy="8"  r="1.5"/><circle cx="8" cy="8"  r="1.5"/>
+                      <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
+                    </svg>
+                  </div>
                   <div className="flex-1 min-w-0">
                     {/* Policy name + conflict badge (#12) */}
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -215,21 +261,23 @@ export function OutputStep() {
                   {/* Order controls */}
                   <div className="flex flex-col gap-1 flex-shrink-0">
                     <button
-                      onClick={() => moveUp(index)}
+                      onClick={e => { e.stopPropagation(); moveUp(index); }}
                       disabled={index === 0}
                       className="text-gray-600 hover:text-gray-300 disabled:opacity-20 transition-colors text-xs"
+                      title="Move up"
                     >
                       ↑
                     </button>
                     <button
-                      onClick={() => moveDown(index)}
+                      onClick={e => { e.stopPropagation(); moveDown(index); }}
                       disabled={index === sortedPolicies.length - 1}
                       className="text-gray-600 hover:text-gray-300 disabled:opacity-20 transition-colors text-xs"
+                      title="Move down"
                     >
                       ↓
                     </button>
                     <button
-                      onClick={() => deletePolicy(policy.id)}
+                      onClick={e => { e.stopPropagation(); deletePolicy(policy.id); }}
                       className="text-gray-600 hover:text-red-400 transition-colors text-xs"
                       title="Delete policy"
                     >
