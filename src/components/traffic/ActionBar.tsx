@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { AddressObjectModal } from '../objects/AddressObjectModal';
 import { PolicyModal } from '../policy/PolicyModal';
 import { BatchPolicyModal } from './BatchPolicyModal';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 export function ActionBar() {
   const selectedEntryIds = useAppStore(s => s.selectedEntryIds);
@@ -15,12 +16,15 @@ export function ActionBar() {
   const trafficEntries = useAppStore(s => s.trafficEntries);
   const showConsumed = useAppStore(s => s.showConsumedEntries);
   const setShowConsumed = useAppStore(s => s.setShowConsumedEntries);
+  const deduplicateIgnoringSrcPort = useAppStore(s => s.deduplicateIgnoringSrcPort);
   // Subscribe so the "X filtered" count re-renders live on every filter change.
   const activeFilters = useAppStore(s => s.activeFilters);
 
-  const [showAddrModal, setShowAddrModal] = useState(false);
+  const [showAddrModal, setShowAddrModal]   = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
-  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showBatchModal, setShowBatchModal]  = useState(false);
+  const [showDedupeConfirm, setShowDedupeConfirm] = useState(false);
+  const [dedupeResult, setDedupeResult]     = useState<number | null>(null);
 
   const selectedCount = selectedEntryIds.size;
   const filteredCount = useMemo(
@@ -52,6 +56,27 @@ export function ActionBar() {
             </button>
           )}
         </div>
+
+        {/* Deduplicate button */}
+        <button
+          onClick={() => setShowDedupeConfirm(true)}
+          disabled={totalAvailable === 0}
+          className={clsx(
+            'text-xs px-2 py-0.5 rounded border transition-colors',
+            totalAvailable > 0
+              ? 'border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200'
+              : 'border-gray-800 text-gray-700 cursor-not-allowed',
+          )}
+          title="Remove entries with duplicate destination (ignores source port)"
+        >
+          Deduplicate
+        </button>
+
+        {dedupeResult !== null && (
+          <span className="text-xs text-green-400">
+            ✓ {dedupeResult} removed
+          </span>
+        )}
 
         <div className="flex-1" />
 
@@ -139,6 +164,23 @@ export function ActionBar() {
       )}
       {showBatchModal && (
         <BatchPolicyModal onClose={() => setShowBatchModal(false)} />
+      )}
+      {showDedupeConfirm && (
+        <ConfirmDialog
+          title="Deduplicate Entries"
+          message={
+            `Entries with the same source IP, interfaces, destination IP, destination port and protocol will be merged — regardless of source port.\n\nHit counts will be summed. This action can be undone with Ctrl+Z.`
+          }
+          confirmLabel="Deduplicate"
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            const removed = deduplicateIgnoringSrcPort();
+            setShowDedupeConfirm(false);
+            setDedupeResult(removed);
+            setTimeout(() => setDedupeResult(null), 4000);
+          }}
+          onCancel={() => setShowDedupeConfirm(false)}
+        />
       )}
     </>
   );

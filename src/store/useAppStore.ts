@@ -74,6 +74,8 @@ interface AppActions {
   deletePolicy:  (id: string) => void;
   reorderPolicies: (fromIndex: number, toIndex: number) => void;
 
+  deduplicateIgnoringSrcPort: () => number; // returns number of removed entries
+
   setSortField:          (field: keyof TrafficEntry) => void;
   setShowConsumedEntries: (show: boolean) => void;
   setFortiosVersion:     (v: FortiosVersion) => void;
@@ -392,6 +394,35 @@ export const useAppStore = create<AppState & AppActions>()(
           _future: state._future.slice(0, -1),
           ...next,
         });
+      },
+
+      // ── Deduplication (ignore srcport) ───────────────────────────────────────
+
+      deduplicateIgnoringSrcPort: () => {
+        const state = get();
+        // Key: everything except srcport
+        const seen = new Map<string, TrafficEntry>();
+        for (const e of state.trafficEntries) {
+          const key = `${e.srcip}|${e.srcintf}|${e.dstip}|${e.dstport}|${e.dstintf}|${e.proto}`;
+          const existing = seen.get(key);
+          if (!existing) {
+            seen.set(key, e);
+          } else {
+            // Merge: keep the surviving entry but sum hitCounts
+            seen.set(key, { ...existing, hitCount: existing.hitCount + e.hitCount });
+          }
+        }
+        const deduped = Array.from(seen.values());
+        const removed = state.trafficEntries.length - deduped.length;
+        if (removed === 0) return 0;
+        // Prune selection to entries that survived
+        const survivingIds = new Set(deduped.map(e => e.id));
+        set({
+          _past: [...state._past.slice(-19), snapshot(state)], _future: [],
+          trafficEntries:   deduped,
+          selectedEntryIds: new Set([...state.selectedEntryIds].filter(id => survivingIds.has(id))),
+        });
+        return removed;
       },
 
       // ── Misc ─────────────────────────────────────────────────────────────────
