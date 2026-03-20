@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="100" ry="100" fill="#111827"/>
+
+  <!-- Shield body -->
+  <path d="M256 80 L390 136 L390 268 C390 344 330 408 256 432 C182 408 122 344 122 268 L122 136 Z"
+        fill="#ea580c"/>
+
+  <!-- Shield inner highlight (lighter top) -->
+  <path d="M256 100 L374 150 L374 268 C374 335 320 394 256 416 C192 394 138 335 138 268 L138 150 Z"
+        fill="#f97316"/>
+
+  <!-- Network/policy lines: horizontal rules representing firewall rules -->
+  <rect x="182" y="208" width="148" height="14" rx="7" fill="white" opacity="0.95"/>
+  <rect x="182" y="243" width="100" height="14" rx="7" fill="white" opacity="0.95"/>
+  <rect x="182" y="278" width="125" height="14" rx="7" fill="white" opacity="0.95"/>
+
+  <!-- Checkmark circle top-left of rules (accept indicator) -->
+  <circle cx="196" cy="175" r="20" fill="white" opacity="0.15"/>
+  <path d="M186 175 L193 183 L208 165" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Small lock icon at bottom of shield -->
+  <rect x="238" y="318" width="36" height="26" rx="5" fill="white" opacity="0.9"/>
+  <path d="M247 318 L247 310 C247 302 265 302 265 310 L265 318" stroke="white" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <circle cx="256" cy="330" r="4" fill="#ea580c"/>
+</svg>
